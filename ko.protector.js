@@ -33,7 +33,7 @@
 		// <script> tag: use the global `ko` object, attaching a `mapping` property
 		factory(ko, ko.protector = {});
 	}
-}(function (ko, protector) {
+})(function (ko, protector) {
 
 	if (ko === undefined) {
 		throw 'Knockout is required, please ensure it is loaded before loading this protector plug-in';
