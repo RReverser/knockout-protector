@@ -67,7 +67,7 @@
 		return target;
 	};
 
-	function traverseProtected(viewModel, method, path) {
+	protector.traverse = function (viewModel, method, path) {
 		for (var name in viewModel) {
 			var value = viewModel[name];
 			if (!value || value.nodeType) continue;
@@ -75,19 +75,19 @@
 			if (ko.isObservable(value)) {
 				if (ko.isObservable(value.protector)) method(value, (path ? path + '.' : '') + name);
 			} else {
-				traverseProtected(value, method);
+				protector.traverse(value, method);
 			}
 		}
-	}
+	};
 
 	protector.accept = function (viewModel) {
-		traverseProtected(viewModel, function (accessor) {
+		protector.traverse(viewModel, function (accessor) {
 			accessor.protector.accept();
 		});
 	};
 
 	protector.revert = function (viewModel) {
-		traverseProtected(viewModel, function (accessor) {
+		protector.traverse(viewModel, function (accessor) {
 			accessor.protector.revert();
 		});
 	};
@@ -95,7 +95,7 @@
 	protector.getState = function (viewModel, callback) {
 		var state = {};
 
-		traverseProtected(viewModel, function (accessor, path) {
+		protector.traverse(viewModel, function (accessor, path) {
 			state[path] = accessor.peek();
 			if (callback) callback.apply(this, arguments);
 		});
@@ -104,7 +104,7 @@
 	};
 
 	protector.setState = function (viewModel, state) {
-		traverseProtected(viewModel, function (accessor, path) {
+		protector.traverse(viewModel, function (accessor, path) {
 			if (path in state) accessor(state[path]);
 		});
 	};
