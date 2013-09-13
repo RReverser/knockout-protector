@@ -67,13 +67,17 @@
 		return target;
 	};
 
+	protector.isProtected = function (accessor) {
+		return ko.isObservable(accessor.protector);
+	};
+
 	protector.traverse = function (viewModel, method, path) {
 		for (var name in viewModel) {
 			var value = viewModel[name];
 			if (!value || value.nodeType) continue;
 
 			if (ko.isObservable(value)) {
-				if (ko.isObservable(value.protector)) method(value, (path ? path + '.' : '') + name);
+				if (protector.isProtected(value)) method(value, (path ? path + '.' : '') + name);
 			} else {
 				protector.traverse(value, method);
 			}
