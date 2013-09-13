@@ -92,11 +92,12 @@
 		});
 	};
 
-	protector.getState = function (viewModel) {
+	protector.getState = function (viewModel, callback) {
 		var state = {};
 
 		traverseProtected(viewModel, function (accessor, path) {
 			state[path] = accessor.peek();
+			if (callback) callback.apply(this, arguments);
 		});
 
 		return state;
@@ -106,12 +107,6 @@
 		traverseProtected(viewModel, function (accessor, path) {
 			if (path in state) accessor(state[path]);
 		});
-	};
-
-	protector.doTemp = function (viewModel, callback) {
-		var state = protector.getState(viewModel);
-		callback.call(viewModel);
-		protector.setState(state);
 	};
 
 });
