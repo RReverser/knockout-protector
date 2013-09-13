@@ -67,13 +67,13 @@
 		return target;
 	};
 
-	function traverseProtected(viewModel, method) {
+	function traverseProtected(viewModel, method, path) {
 		for (var name in viewModel) {
 			var value = viewModel[name];
 			if (!value || value.nodeType) continue;
 
 			if (ko.isObservable(value)) {
-				if (ko.isObservable(value.temp)) method(value);
+				if (ko.isObservable(value.temp)) method(value, (path ? path + '.' : '') + name);
 			} else {
 				traverseProtected(value, method);
 			}
@@ -90,6 +90,28 @@
 		traverseProtected(viewModel, function (accessor) {
 			accessor.revert();
 		});
+	};
+
+	protector.getState = function (viewModel) {
+		var state = {};
+
+		traverseProtected(viewModel, function (accessor, path) {
+			state[path] = accessor.peek();
+		});
+
+		return state;
+	};
+
+	protector.setState = function (viewModel, state) {
+		traverseProtected(viewModel, function (accessor, path) {
+			if (path in state) accessor(state[path]);
+		});
+	};
+
+	protector.doTemp = function (viewModel, callback) {
+		var state = protector.getState(viewModel);
+		callback.call(viewModel);
+		protector.setState(state);
 	};
 
 });
