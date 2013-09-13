@@ -43,25 +43,25 @@
 	ko.protector = protector;
 
 	ko.extenders.protector = function (target) {
-		var temp = target.temp = ko.observable();
+		var protector = target.protector = ko.observable();
 		var wasChanged = ko.observable(true);
 
 		// pushing local changes to owner observable
-		temp.accept = function (accept) {
+		protector.accept = function (accept) {
 			if (!wasChanged()) return;
-			accept !== false ? target(temp()) : temp(target());
+			accept !== false ? target(protector()) : protector(target());
 			wasChanged(false);
 		};
 
 		// reverting local changes to owner's state
-		temp.revert = function () {
-			temp.accept(false);
+		protector.revert = function () {
+			protector.accept(false);
 		};
 
 		// committing all the third-party changes to temporary observable when it was not changed by user
 		ko.computed(function () {
 			if (wasChanged()) return;
-			temp(target());
+			protector(target());
 		});
 
 		return target;
@@ -73,7 +73,7 @@
 			if (!value || value.nodeType) continue;
 
 			if (ko.isObservable(value)) {
-				if (ko.isObservable(value.temp)) method(value, (path ? path + '.' : '') + name);
+				if (ko.isObservable(value.protector)) method(value, (path ? path + '.' : '') + name);
 			} else {
 				traverseProtected(value, method);
 			}
@@ -82,13 +82,13 @@
 
 	protector.accept = function (viewModel) {
 		traverseProtected(viewModel, function (accessor) {
-			accessor.accept();
+			accessor.protector.accept();
 		});
 	};
 
 	protector.revert = function (viewModel) {
 		traverseProtected(viewModel, function (accessor) {
-			accessor.revert();
+			accessor.protector.revert();
 		});
 	};
 
