@@ -104,7 +104,7 @@
 				stateValue = state[name];
 
 			if (ko.isObservable(vmValue)) {
-				vmValue(stateValue);
+				if (ko.isWriteableObservable(vmValue)) vmValue(ko.unwrap(stateValue));
 			} else
 			if (typeof vmValue === 'object') {
 				protector.setState(vmValue, stateValue);
