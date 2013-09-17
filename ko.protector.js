@@ -13,7 +13,6 @@
 */
 
 /*globals
-    jQuery: false,
     require: false,
     exports: false,
     define: false,
@@ -42,75 +41,77 @@
 	// create our namespace object
 	ko.protector = protector;
 
-	ko.extenders.protector = function (target) {
-		var protector = target.protector = ko.observable();
-		var wasChanged = ko.observable(true);
-
-		// pushing local changes to owner observable
-		protector.accept = function (accept) {
-			if (!wasChanged()) return;
-			accept !== false ? target(protector()) : protector(target());
-			wasChanged(false);
-		};
-
-		// reverting local changes to owner's state
-		protector.revert = function () {
-			protector.accept(false);
-		};
-
-		// committing all the third-party changes to temporary observable when it was not changed by user
-		ko.computed(function () {
-			if (wasChanged()) return;
-			protector(target());
+	ko.extenders.protector = function (frontend, element) {
+		var backend = frontend.protector = ko.utils.extend(ko.observable(), {
+			hasLocalChanges: ko.observable(false),
+			accept: function () {
+				if (!backend.hasLocalChanges()) return;
+				backend(frontend());
+				backend.hasLocalChanges(false);
+			},
+			revert: function () {
+				if (!backend.hasLocalChanges()) return;
+				frontend(backend());
+				backend.hasLocalChanges(false);
+			}
 		});
 
-		return target;
+		ko.computed(function () {
+			if (!backend.hasLocalChanges()) backend(frontend());
+		});
+
+		frontend.subscribe(function () {
+			backend.hasLocalChanges(true);
+		});
+
+		var viewModel = ko.dataFor(element.form);
+		(viewModel.protectors || (viewModel.protectors = [])).push(backend);
+
+		return frontend;
 	};
 
-	protector.isProtected = function (accessor) {
-		return ko.isObservable(accessor.protector);
-	};
+	ko.bindingHandlers.protector = {
+		init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+			var wrappedBingings = valueAccessor();
 
-	protector.traverse = function (viewModel, method, path) {
-		for (var name in viewModel) {
-			var value = viewModel[name];
-			if (!value || value.nodeType) continue;
-
-			if (ko.isObservable(value)) {
-				if (protector.isProtected(value)) method(value, (path ? path + '.' : '') + name);
-			} else {
-				protector.traverse(value, method);
+			for (var name in wrappedBingings) {
+				wrappedBingings[name] = wrappedBingings[name].extend({protector: element});
 			}
+
+			ko.applyBindingsToNode(element, wrappedBingings);
 		}
 	};
 
-	protector.accept = function (viewModel) {
-		protector.traverse(viewModel, function (accessor) {
-			accessor.protector.accept();
+	protector.accept = function (protectors) {
+		ko.utils.arrayForEach(protectors, function (protector) {
+			protector.accept();
 		});
 	};
 
-	protector.revert = function (viewModel) {
-		protector.traverse(viewModel, function (accessor) {
-			accessor.protector.revert();
+	protector.revert = function (protectors) {
+		ko.utils.arrayForEach(protectors, function (protector) {
+			protector.revert();
 		});
 	};
 
-	protector.getState = function (viewModel, callback) {
-		var state = {};
-
-		protector.traverse(viewModel, function (accessor, path) {
-			state[path] = accessor.peek();
-			if (callback) callback.apply(this, arguments);
-		});
-
-		return state;
+	protector.getState = function (viewModel) {
+		return ko.toJS(viewModel);
 	};
 
 	protector.setState = function (viewModel, state) {
-		protector.traverse(viewModel, function (accessor, path) {
-			if (path in state) accessor(state[path]);
-		});
+		for (var name in state) {
+			var vmValue = viewModel[name],
+				stateValue = state[name];
+
+			if (ko.isObservable(vmValue)) {
+				vmValue(stateValue);
+			} else
+			if (typeof vmValue === 'object') {
+				protector.setState(vmValue, stateValue);
+			} else {
+				viewModel[name] = stateValue;
+			}
+		}
 	};
 
 });
