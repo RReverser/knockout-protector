@@ -42,6 +42,8 @@
 	ko.protector = protector;
 
 	ko.extenders.protector = function (frontend, element) {
+		if ('protector' in frontend) return frontend;
+		
 		var backend = frontend.protector = ko.utils.extend(ko.observable(), {
 			hasLocalChanges: ko.observable(false),
 			accept: function () {
